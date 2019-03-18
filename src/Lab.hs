@@ -30,22 +30,39 @@ duckily =
 
 -- | A function to find the grandduck of a duck in the duck family.
 grandduck :: [(String, String)] -> String -> Maybe String
-grandduck = undefined
+grandduck tbl name = lookup name tbl >>= flip lookup tbl
+
+grandduck' :: [(String, String)] -> String -> Maybe String
+grandduck' tbl name = lookup name tbl >>= \x -> lookup x tbl
+
+grandduck'' :: [(String, String)] -> String -> Maybe String
+grandduck'' tbl name = do 
+    x <- lookup name tbl
+    lookup x tbl
 
 --------------------------------------------------------------------------------
 -- Generic functions
 
 -- | mapM, but without do-notation
 mapM :: Monad m => (a -> m b) -> [a] -> m [b]
-mapM = undefined
+mapM f []     = return []
+mapM f (x:xs) = f x       >>= \y ->
+                mapM f xs >>= \ys ->
+                return (y:ys)
 
 -- | the same as above, but with Applicative instead of Monad
 mapA :: Applicative f => (a -> f b) -> [a] -> f [b]
-mapA = undefined
+mapA f []     = pure []
+mapA f (x:xs) = (:) <$> f x <*> mapA f xs
 
 -- | Like zipWith, but the function returns a computation (has an effect).
 zipWithM :: Monad m => (a -> b -> m c) -> [a] -> [b] -> m [c]
-zipWithM = undefined
+zipWithM f [] _ = return []
+zipWithM f _ [] = return []
+zipWithM f (x:xs) (y:ys) = do 
+    r  <- f x y 
+    rs <- zipWithM f xs ys 
+    return (r:rs) 
 
 --------------------------------------------------------------------------------
 -- Either is a Monad
@@ -57,14 +74,17 @@ data Either a b = Left a | Right b
     deriving (Eq, Show)
 
 instance Functor (Either e) where
-    fmap = undefined
+    fmap _ (Left x)  = Left x 
+    fmap f (Right y) = Right (f y)
 
 instance Applicative (Either e) where
-    pure = undefined
+    pure = Right
 
-    (<*>) = undefined
+    Left err <*> _ = Left err 
+    Right f  <*> g = f <$> g
 
 instance Monad (Either e) where
-    (>>=) = undefined
+    Left err >>= _ = Left err 
+    Right x  >>= f = f x
 
 --------------------------------------------------------------------------------
